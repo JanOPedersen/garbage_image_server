@@ -1,0 +1,19 @@
+version: "3.9"
+
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: litter-api
+    ports:
+      - "5000:5000"
+    environment:
+      LOG_LEVEL: INFO
+      DEVICE: cpu
+      DEFAULT_MODEL_ID: cigarette-butt-v1
+      MODEL_MANIFEST_DIR: models/manifests
+      MAX_CONTENT_LENGTH: 8388608
+    volumes:
+      - .:/app
+    command: python run.py

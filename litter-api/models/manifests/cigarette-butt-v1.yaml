@@ -1,0 +1,12 @@
+model_id: cigarette-butt-v1
+version: 2026-03-01
+task_type: instance_segmentation
+framework: detectron2
+device: cpu
+weights_path: /app/model_artifacts/cigarette-butt/model_final.pth
+config_path: /app/model_artifacts/cigarette-butt/config.yaml
+labels:
+  - cigarette_butt
+default_score_threshold: 0.5
+max_image_side: 2048
+sync_allowed: true
