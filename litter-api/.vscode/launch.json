@@ -1,0 +1,20 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Debug Flask app",
+      "type": "python",
+      "request": "launch",
+      "program": "${workspaceFolder}/run.py",
+      "console": "integratedTerminal",
+      "cwd": "${workspaceFolder}",
+      "env": {
+        "LOG_LEVEL": "DEBUG",
+        "DEVICE": "cpu",
+        "DEFAULT_MODEL_ID": "cigarette-butt-v1",
+        "MODEL_MANIFEST_DIR": "models/manifests"
+      },
+      "justMyCode": false
+    }
+  ]
+}
