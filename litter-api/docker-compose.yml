@@ -7,13 +7,16 @@ services:
       dockerfile: Dockerfile
     container_name: litter-api
     ports:
-      - "5000:5000"
+      - "8000:5000"
     environment:
       LOG_LEVEL: INFO
       DEVICE: cpu
       DEFAULT_MODEL_ID: cigarette-butt-v1
       MODEL_MANIFEST_DIR: models/manifests
       MAX_CONTENT_LENGTH: 8388608
+      FLASK_RUN_HOST: 0.0.0.0
+      FLASK_RUN_PORT: 5000
+      FLASK_DEBUG: "false"
     volumes:
       - .:/app
     command: python run.py
