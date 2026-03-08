@@ -1,8 +1,13 @@
 from app import create_app
+from app.config import Config
+
+
+class TestConfig(Config):
+    TESTING = True
 
 
 def test_healthz():
-    app = create_app()
+    app = create_app(TestConfig)
     client = app.test_client()
 
     resp = client.get("/healthz")

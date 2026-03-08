@@ -8,7 +8,6 @@ from app.extensions import api
 from app.logging_config import configure_logging
 from app.services.model_registry import model_registry
 
-
 def create_app(config_object: type[Config] = Config) -> Flask:
     app = Flask(__name__)
     app.config.from_object(config_object)
@@ -20,8 +19,9 @@ def create_app(config_object: type[Config] = Config) -> Flask:
     api.register_blueprint(ModelsBlueprint)
     api.register_blueprint(PredictBlueprint)
 
-    # Load models once at startup
-    with app.app_context():
-        model_registry.load_from_manifest_dir(app.config["MODEL_MANIFEST_DIR"])
+    # Load models only when not testing
+    if not app.config.get("TESTING", False):
+        with app.app_context():
+            model_registry.load_from_manifest_dir(app.config["MODEL_MANIFEST_DIR"])
 
     return app
