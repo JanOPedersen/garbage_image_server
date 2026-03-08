@@ -10,4 +10,9 @@ numpy==2.2.3
 # Pin these to the versions that worked in your training/inference env
 torch==2.10.0
 torchvision==0.25.0
-# detectron2 @ git+https://github.com/facebookresearch/detectron2.git@...
+
+# After installing torch and torchvision, wheel and ninja are needed to install detectron2 from source, 
+# which is required for the Litter API to work with the trained model.
+# python -m pip install --no-build-isolation -e "git+https://github.com/facebookresearch/detectron2.git@main#egg=detectron2"
+wheel
+ninja
