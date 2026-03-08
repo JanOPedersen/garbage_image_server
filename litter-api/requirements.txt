@@ -16,3 +16,5 @@ torchvision==0.25.0
 # python -m pip install --no-build-isolation -e "git+https://github.com/facebookresearch/detectron2.git@main#egg=detectron2"
 wheel
 ninja
+
+debugpy
