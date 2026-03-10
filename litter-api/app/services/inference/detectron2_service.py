@@ -8,6 +8,7 @@ from app.services.inference.base import BaseModelService
 from app.services.inference.preprocessing import decode_image
 from app.services.inference.postprocessing import serialize_detections
 
+import torch
 from detectron2.engine import DefaultPredictor
 
 
@@ -94,6 +95,11 @@ class Detectron2Service(BaseModelService):
         # Run one dummy inference once the real predictor exists
         if not self.loaded:
             raise RuntimeError("Model must be loaded before warmup")
+        
+        # Warmup with a small dummy image
+        #dummy = torch.zeros((256, 256, 3), dtype=torch.uint8).numpy()
+        #with torch.inference_mode():
+        #    _ = self.predictor(dummy)
 
     def predict(
         self,
