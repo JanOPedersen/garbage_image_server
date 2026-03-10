@@ -2,10 +2,13 @@ import time
 from typing import Any
 
 import os
+from pathlib import Path
 
 from app.services.inference.base import BaseModelService
 from app.services.inference.preprocessing import decode_image
 from app.services.inference.postprocessing import serialize_detections
+
+from detectron2.engine import DefaultPredictor
 
 
 class Detectron2Service(BaseModelService):
@@ -15,7 +18,7 @@ class Detectron2Service(BaseModelService):
 
     def load(self) -> None:
         model_zoo_config = self.manifest["model_zoo_config"]
-        weights_path = self.manifest["weights_path"]
+        weights_path = self._resolve_weights_path(str(self.manifest["weights_path"]))
 
         try:
             from detectron2 import model_zoo
@@ -37,8 +40,55 @@ class Detectron2Service(BaseModelService):
             self.manifest.get("default_score_threshold", 0.5)
         )
 
-        self.predictor = "stub"
+        if "min_size_test" in self.manifest:
+            cfg.INPUT.MIN_SIZE_TEST = int(self.manifest["min_size_test"])
+
+        if "max_size_test" in self.manifest:
+            cfg.INPUT.MAX_SIZE_TEST = int(self.manifest["max_size_test"])
+
+        self.cfg = cfg
+        try:
+            self.predictor = DefaultPredictor(cfg)
+        except Exception as exc:
+            raise RuntimeError(
+                f"Failed to initialize Detectron2 predictor for model '{self.model_id}'. "
+                f"Resolved weights path: {weights_path}"
+            ) from exc
         self.loaded = True
+
+    def _resolve_weights_path(self, raw_path: str) -> Path:
+        path = Path(raw_path)
+        checked_paths: list[Path] = [path]
+
+        # Directly usable path (absolute or cwd-relative).
+        if path.exists():
+            return path.resolve()
+
+        # Map Docker paths like /app/model_artifacts/... to local repo path.
+        normalized = raw_path.replace("\\", "/")
+        if normalized.startswith("/app/"):
+            # detectron2_service.py lives at app/services/inference/, so repo root is parents[3].
+            repo_root = Path(__file__).resolve().parents[3]
+            relative = normalized.removeprefix("/app/")
+
+            candidate = repo_root / relative
+            checked_paths.append(candidate)
+            if candidate.exists():
+                return candidate.resolve()
+
+            # Current repo stores artifacts under app/model_artifacts.
+            candidate_in_app_dir = repo_root / "app" / relative
+            checked_paths.append(candidate_in_app_dir)
+            if candidate_in_app_dir.exists():
+                return candidate_in_app_dir.resolve()
+
+        raise FileNotFoundError(
+            "Model weights not found. "
+            f"Configured path: '{raw_path}'. "
+            f"Checked: {[str(p) for p in checked_paths]}. "
+            "If running locally, use a local path (for example 'model_artifacts/...') "
+            "or ensure Docker-style '/app/...' path is mapped correctly."
+        )
 
     def warmup(self) -> None:
         # Run one dummy inference once the real predictor exists
