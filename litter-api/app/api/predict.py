@@ -30,12 +30,14 @@ def predict(args):
     image_bytes = image_file.read()
     if not image_bytes:
         abort(400, message="Uploaded image is empty")
+    filename = image_file.filename
 
     request_id = f"req_{uuid.uuid4().hex[:12]}"
     started = time.perf_counter()
 
     result = service.predict(
         image_bytes=image_bytes,
+        filename=filename,
         score_threshold=args.get("score_threshold"),
         return_masks=args.get("return_masks", False),
     )

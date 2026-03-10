@@ -107,6 +107,7 @@ class Detectron2Service(BaseModelService):
     def predict(
         self,
         image_bytes: bytes,
+        filename: str | None = None,
         score_threshold: float | None = None,
         return_masks: bool = False,
     ) -> dict[str, Any]:
@@ -158,6 +159,9 @@ class Detectron2Service(BaseModelService):
         )
         postprocess_ms = (time.perf_counter() - t2) * 1000
 
+        if filename:
+            image_meta["filename"] = filename
+
         return {
             "model_id": self.model_id,
             "image": image_meta,
@@ -166,7 +170,7 @@ class Detectron2Service(BaseModelService):
                 "preprocess": round(preprocess_ms, 2),
                 "forward": round(forward_ms, 2),
                 "postprocess": round(postprocess_ms, 2),
-                "total": 0.0,
+                "total": round(decode_ms + preprocess_ms + forward_ms + postprocess_ms, 2),
             },
             "detections": detections,
         }
