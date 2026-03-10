@@ -3,10 +3,17 @@ version: 2026-03-01
 task_type: instance_segmentation
 framework: detectron2
 device: cpu
+
 weights_path: /app/model_artifacts/cigarette-butt/model_final.pth
-config_path: /app/model_artifacts/cigarette-butt/config.yaml
+model_zoo_config: COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_3x.yaml
+
 labels:
   - cigarette_butt
+num_classes: 1
+
 default_score_threshold: 0.5
+min_size_test: 512
+max_size_test: 768
+
 max_image_side: 2048
 sync_allowed: true

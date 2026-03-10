@@ -1,6 +1,8 @@
 import time
 from typing import Any
 
+import os
+
 from app.services.inference.base import BaseModelService
 from app.services.inference.preprocessing import decode_image
 from app.services.inference.postprocessing import serialize_detections
@@ -12,12 +14,29 @@ class Detectron2Service(BaseModelService):
         self.predictor = None
 
     def load(self) -> None:
-        # Replace this block with real Detectron2 loading
-        # Example later:
-        # - build cfg
-        # - cfg.MODEL.WEIGHTS = ...
-        # - cfg.MODEL.DEVICE = ...
-        # - self.predictor = DefaultPredictor(cfg)
+        model_zoo_config = self.manifest["model_zoo_config"]
+        weights_path = self.manifest["weights_path"]
+
+        try:
+            from detectron2 import model_zoo
+            from detectron2.config import get_cfg
+        except Exception as exc:
+            raise RuntimeError(
+                "Failed to import detectron2. Ensure detectron2 is installed and dependency "
+                "versions are compatible (e.g. detectron2 v0.6 requires Pillow 9.x)."
+            ) from exc
+
+        cfg = get_cfg()
+        cfg.merge_from_file(model_zoo.get_config_file(model_zoo_config))
+
+        cfg.MODEL.DEVICE = self.manifest.get("device", os.getenv("DEVICE", "cpu"))
+        cfg.MODEL.WEIGHTS = str(weights_path)
+
+        cfg.MODEL.ROI_HEADS.NUM_CLASSES = int(self.manifest["num_classes"])
+        cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST = float(
+            self.manifest.get("default_score_threshold", 0.5)
+        )
+
         self.predictor = "stub"
         self.loaded = True
 
@@ -36,7 +55,7 @@ class Detectron2Service(BaseModelService):
             raise RuntimeError(f"Model {self.model_id} not loaded")
 
         t0 = time.perf_counter()
-        image_np, image_meta = decode_image(image_bytes)
+        _, image_meta = decode_image(image_bytes)
         decode_ms = (time.perf_counter() - t0) * 1000
 
         t1 = time.perf_counter()

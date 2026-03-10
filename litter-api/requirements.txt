@@ -4,7 +4,8 @@ marshmallow==3.26.1
 gunicorn==23.0.0
 python-dotenv==1.0.1
 PyYAML==6.0.2
-Pillow==11.1.0
+# detectron2 v0.6 relies on legacy PIL interpolation constants (e.g. Image.LINEAR)
+Pillow==9.5.0
 numpy==2.2.3
 
 # Pin these to the versions that worked in your training/inference env
