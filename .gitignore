@@ -4,3 +4,6 @@ __pycache__/
 
 # Ignore virtual environment
 .garbage_image_server/
+
+# Ignore large files
+litter-api/app/model_artifacts/cigarette-butt/model_final.pth
