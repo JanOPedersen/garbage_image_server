@@ -97,9 +97,9 @@ class Detectron2Service(BaseModelService):
             raise RuntimeError("Model must be loaded before warmup")
         
         # Warmup with a small dummy image
-        #dummy = torch.zeros((256, 256, 3), dtype=torch.uint8).numpy()
-        #with torch.inference_mode():
-        #    _ = self.predictor(dummy)
+        dummy = torch.zeros((256, 256, 3), dtype=torch.uint8).numpy()
+        with torch.inference_mode():
+            _ = self.predictor(dummy)
 
     def predict(
         self,
