@@ -96,6 +96,9 @@ class Detectron2Service(BaseModelService):
         if not self.loaded:
             raise RuntimeError("Model must be loaded before warmup")
         
+        if not self.predictor:
+            raise RuntimeError("Predictor is not loaded")
+
         # Warmup with a small dummy image
         dummy = torch.zeros((256, 256, 3), dtype=torch.uint8).numpy()
         with torch.inference_mode():
@@ -111,33 +114,49 @@ class Detectron2Service(BaseModelService):
             raise RuntimeError(f"Model {self.model_id} not loaded")
 
         t0 = time.perf_counter()
-        _, image_meta = decode_image(image_bytes)
+        image_np, image_meta = decode_image(image_bytes)
         decode_ms = (time.perf_counter() - t0) * 1000
+        # No additional preprocessing is currently applied after decode.
+        preprocess_ms = 0.0
 
         t1 = time.perf_counter()
-        # Add resizing / normalization here if needed
-        preprocess_ms = (time.perf_counter() - t1) * 1000
+        with torch.inference_mode():
+            outputs = self.predictor(image_np)
+        forward_ms = (time.perf_counter() - t1) * 1000
 
         t2 = time.perf_counter()
+        instances = outputs["instances"].to("cpu")
 
-        # ---- STUB INFERENCE ----
-        # Replace with actual Detectron2 outputs
-        boxes = [[10, 20, 40, 60]]
-        scores = [0.97]
-        labels = ["cigarette_butt"]
-        masks_rle = [None] if return_masks else None
-        # ------------------------
+        pred_boxes = instances.pred_boxes.tensor.tolist() if instances.has("pred_boxes") else []
+        scores = instances.scores.tolist() if instances.has("scores") else []
+        pred_classes = instances.pred_classes.tolist() if instances.has("pred_classes") else []
 
-        forward_ms = (time.perf_counter() - t2) * 1000
+        if score_threshold is not None:
+            kept = [i for i, s in enumerate(scores) if s >= float(score_threshold)]
+            pred_boxes = [pred_boxes[i] for i in kept]
+            scores = [scores[i] for i in kept]
+            pred_classes = [pred_classes[i] for i in kept]
 
-        t3 = time.perf_counter()
+        label_map = self.manifest.get("labels", [])
+        labels = [
+            label_map[class_idx] if class_idx < len(label_map) else str(class_idx)
+            for class_idx in pred_classes
+        ]
+
+        masks_rle = None
+        if return_masks and instances.has("pred_masks"):
+            masks = instances.pred_masks.numpy()
+            if score_threshold is not None:
+                masks = [masks[i] for i in kept]
+            masks_rle = [self._fake_mask_tag(mask) for mask in masks]
+
         detections = serialize_detections(
-            boxes=boxes,
+            boxes=pred_boxes,
             scores=scores,
             labels=labels,
             masks_rle=masks_rle,
         )
-        postprocess_ms = (time.perf_counter() - t3) * 1000
+        postprocess_ms = (time.perf_counter() - t2) * 1000
 
         return {
             "model_id": self.model_id,
@@ -151,3 +170,11 @@ class Detectron2Service(BaseModelService):
             },
             "detections": detections,
         }
+
+    def _fake_mask_tag(self, mask: Any) -> str:
+        # Lightweight placeholder mask representation until real RLE encoding is added.
+        area = int(mask.sum()) if hasattr(mask, "sum") else 0
+        shape = getattr(mask, "shape", None)
+        if isinstance(shape, tuple) and len(shape) >= 2:
+            return f"mask_{shape[0]}x{shape[1]}_{area}"
+        return f"mask_unknown_{area}"
