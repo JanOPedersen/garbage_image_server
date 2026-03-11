@@ -24,7 +24,7 @@ services:
 
       PORT: "5000"
 
-      MODEL_ARTIFACTS_DIR: /tmp/model_artifacts
+      MODEL_ARTIFACTS_DIR: /app/app/model_artifacts
       MODEL_SUBDIR: cigarette-butt
       MODEL_FILENAME: model_final.pth
 

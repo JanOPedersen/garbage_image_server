@@ -65,74 +65,24 @@ class Detectron2Service(BaseModelService):
         self.loaded = True
 
     def _resolve_weights_path(self, raw_path: str) -> Path:
-        path = Path(raw_path)
-        checked_paths: list[Path] = []
-
-        # 1. Direct path (absolute or cwd-relative)
-        checked_paths.append(path)
-        if path.exists():
-            return path.resolve()
-
         normalized = raw_path.replace("\\", "/")
         artifacts_dir = os.getenv("MODEL_ARTIFACTS_DIR")
 
-        # 2. Resolve using MODEL_ARTIFACTS_DIR
-        if artifacts_dir:
-            artifacts_base = Path(artifacts_dir)
+        if not artifacts_dir:
+            raise FileNotFoundError(
+                "Model weights not found. "
+                f"Configured path: '{raw_path}'. "
+                "MODEL_ARTIFACTS_DIR is not set."
+            )
 
-            # If manifest uses Docker-style absolute path:
-            # /app/model_artifacts/cigarette-butt/model_final.pth
-            docker_artifacts_prefix = "/app/model_artifacts/"
-            if normalized.startswith(docker_artifacts_prefix):
-                relative = normalized.removeprefix(docker_artifacts_prefix)
-                candidate = artifacts_base / relative
-                checked_paths.append(candidate)
-                if candidate.exists():
-                    return candidate.resolve()
-
-            # If manifest uses repo-relative path:
-            # model_artifacts/cigarette-butt/model_final.pth
-            repo_artifacts_prefix = "model_artifacts/"
-            if normalized.startswith(repo_artifacts_prefix):
-                relative = normalized.removeprefix(repo_artifacts_prefix)
-                candidate = artifacts_base / relative
-                checked_paths.append(candidate)
-                if candidate.exists():
-                    return candidate.resolve()
-
-            # If manifest already uses a relative path:
-            # cigarette-butt/model_final.pth
-            if not Path(normalized).is_absolute():
-                candidate = artifacts_base / normalized
-                checked_paths.append(candidate)
-                if candidate.exists():
-                    return candidate.resolve()
-
-            # Last fallback: filename only
-            candidate = artifacts_base / Path(normalized).name
-            checked_paths.append(candidate)
-            if candidate.exists():
-                return candidate.resolve()
-
-        # 3. Local dev fallback: map /app/... paths into repo
-        if normalized.startswith("/app/"):
-            repo_root = Path(__file__).resolve().parents[3]
-            relative = normalized.removeprefix("/app/")
-
-            candidate = repo_root / relative
-            checked_paths.append(candidate)
-            if candidate.exists():
-                return candidate.resolve()
-
-            candidate_in_app_dir = repo_root / "app" / relative
-            checked_paths.append(candidate_in_app_dir)
-            if candidate_in_app_dir.exists():
-                return candidate_in_app_dir.resolve()
+        candidate = (Path(artifacts_dir) / normalized.lstrip("/")).resolve()
+        if candidate.exists():
+            return candidate
 
         raise FileNotFoundError(
             "Model weights not found. "
             f"Configured path: '{raw_path}'. "
-            f"Checked: {[str(p) for p in checked_paths]}. "
+            f"Checked: ['{candidate}']. "
             "Ensure MODEL_ARTIFACTS_DIR is set correctly or use a relative path like "
             "'cigarette-butt/model_final.pth'."
         )
