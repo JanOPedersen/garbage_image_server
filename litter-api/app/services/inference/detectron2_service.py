@@ -1,5 +1,6 @@
 import time
 from typing import Any
+import importlib
 
 import os
 from pathlib import Path
@@ -8,22 +9,28 @@ from app.services.inference.base import BaseModelService
 from app.services.inference.preprocessing import decode_image
 from app.services.inference.postprocessing import serialize_detections
 
-import torch
-from detectron2.engine import DefaultPredictor
-
 
 class Detectron2Service(BaseModelService):
     def __init__(self, manifest: dict[str, Any]) -> None:
         super().__init__(manifest)
         self.predictor = None
 
+    def _get_torch(self) -> Any:
+        try:
+            return importlib.import_module("torch")
+        except Exception as exc:
+            raise RuntimeError(
+                "Failed to import torch. Ensure torch is installed in the active environment."
+            ) from exc
+
     def load(self) -> None:
         model_zoo_config = self.manifest["model_zoo_config"]
         weights_path = self._resolve_weights_path(str(self.manifest["weights_path"]))
 
         try:
-            from detectron2 import model_zoo
-            from detectron2.config import get_cfg
+            model_zoo = importlib.import_module("detectron2.model_zoo")
+            get_cfg = importlib.import_module("detectron2.config").get_cfg
+            default_predictor = importlib.import_module("detectron2.engine").DefaultPredictor
         except Exception as exc:
             raise RuntimeError(
                 "Failed to import detectron2. Ensure detectron2 is installed and dependency "
@@ -49,7 +56,7 @@ class Detectron2Service(BaseModelService):
 
         self.cfg = cfg
         try:
-            self.predictor = DefaultPredictor(cfg)
+            self.predictor = default_predictor(cfg)
         except Exception as exc:
             raise RuntimeError(
                 f"Failed to initialize Detectron2 predictor for model '{self.model_id}'. "
@@ -59,16 +66,32 @@ class Detectron2Service(BaseModelService):
 
     def _resolve_weights_path(self, raw_path: str) -> Path:
         path = Path(raw_path)
-        checked_paths: list[Path] = [path]
+        checked_paths: list[Path] = []
 
-        # Directly usable path (absolute or cwd-relative).
+        # 1. Direct path (absolute or cwd-relative)
+        checked_paths.append(path)
         if path.exists():
             return path.resolve()
 
-        # Map Docker paths like /app/model_artifacts/... to local repo path.
+        # Normalize path for consistent handling
         normalized = raw_path.replace("\\", "/")
+
+        # 2. Resolve relative to MODEL_ARTIFACTS_DIR (Render + Docker setup)
+        artifacts_dir = os.getenv("MODEL_ARTIFACTS_DIR")
+        if artifacts_dir:
+            candidate = Path(artifacts_dir) / normalized.lstrip("/")
+            checked_paths.append(candidate)
+            if candidate.exists():
+                return candidate.resolve()
+
+            # Also try just the filename part
+            candidate = Path(artifacts_dir) / Path(normalized).name
+            checked_paths.append(candidate)
+            if candidate.exists():
+                return candidate.resolve()
+
+        # 3. Map Docker-style /app/... paths to local repo root
         if normalized.startswith("/app/"):
-            # detectron2_service.py lives at app/services/inference/, so repo root is parents[3].
             repo_root = Path(__file__).resolve().parents[3]
             relative = normalized.removeprefix("/app/")
 
@@ -77,7 +100,7 @@ class Detectron2Service(BaseModelService):
             if candidate.exists():
                 return candidate.resolve()
 
-            # Current repo stores artifacts under app/model_artifacts.
+            # Some repos keep artifacts under app/
             candidate_in_app_dir = repo_root / "app" / relative
             checked_paths.append(candidate_in_app_dir)
             if candidate_in_app_dir.exists():
@@ -87,8 +110,8 @@ class Detectron2Service(BaseModelService):
             "Model weights not found. "
             f"Configured path: '{raw_path}'. "
             f"Checked: {[str(p) for p in checked_paths]}. "
-            "If running locally, use a local path (for example 'model_artifacts/...') "
-            "or ensure Docker-style '/app/...' path is mapped correctly."
+            "Ensure MODEL_ARTIFACTS_DIR is set correctly or use a relative path like "
+            "'cigarette-butt/model_final.pth'."
         )
 
     def warmup(self) -> None:
@@ -98,6 +121,8 @@ class Detectron2Service(BaseModelService):
         
         if not self.predictor:
             raise RuntimeError("Predictor is not loaded")
+
+        torch = self._get_torch()
 
         # Warmup with a small dummy image
         dummy = torch.zeros((256, 256, 3), dtype=torch.uint8).numpy()
@@ -113,6 +138,8 @@ class Detectron2Service(BaseModelService):
     ) -> dict[str, Any]:
         if not self.loaded:
             raise RuntimeError(f"Model {self.model_id} not loaded")
+
+        torch = self._get_torch()
 
         t0 = time.perf_counter()
         image_np, image_meta = decode_image(image_bytes)
