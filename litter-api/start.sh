@@ -15,11 +15,26 @@ mkdir -p "${MODEL_DIR}"
 
 if [ -n "${MODEL_URL}" ]; then
   if [ ! -f "${MODEL_PATH}" ]; then
+    echo "Testing asset URL headers..."
+    curl -I -L \
+      --connect-timeout 20 \
+      --max-time 60 \
+      "${MODEL_URL}"
+
     echo "Downloading model from: ${MODEL_URL}"
-    curl -L --fail "${MODEL_URL}" -o "${MODEL_PATH}"
-    echo "Model downloaded to: ${MODEL_PATH}"
+    curl -fL \
+      --connect-timeout 20 \
+      --max-time 600 \
+      --retry 3 \
+      --retry-delay 5 \
+      -o "${MODEL_PATH}" \
+      "${MODEL_URL}"
+
+    echo "Downloaded model to: ${MODEL_PATH}"
+    ls -lh "${MODEL_PATH}"
   else
     echo "Model already exists at: ${MODEL_PATH}"
+    ls -lh "${MODEL_PATH}"
   fi
 else
   echo "MODEL_URL not set; assuming model already exists at: ${MODEL_PATH}"
@@ -28,8 +43,5 @@ fi
 export MODEL_ARTIFACTS_DIR
 export MODEL_PATH
 
-echo "MODEL_ARTIFACTS_DIR=${MODEL_ARTIFACTS_DIR}"
-echo "MODEL_PATH=${MODEL_PATH}"
-echo "PORT=${PORT:-5000}"
-
+echo "Starting Gunicorn on 0.0.0.0:${PORT:-5000}"
 exec gunicorn "run:app" -c gunicorn.conf.py
