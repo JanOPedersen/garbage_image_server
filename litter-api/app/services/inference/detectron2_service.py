@@ -73,24 +73,48 @@ class Detectron2Service(BaseModelService):
         if path.exists():
             return path.resolve()
 
-        # Normalize path for consistent handling
         normalized = raw_path.replace("\\", "/")
-
-        # 2. Resolve relative to MODEL_ARTIFACTS_DIR (Render + Docker setup)
         artifacts_dir = os.getenv("MODEL_ARTIFACTS_DIR")
+
+        # 2. Resolve using MODEL_ARTIFACTS_DIR
         if artifacts_dir:
-            candidate = Path(artifacts_dir) / normalized.lstrip("/")
+            artifacts_base = Path(artifacts_dir)
+
+            # If manifest uses Docker-style absolute path:
+            # /app/model_artifacts/cigarette-butt/model_final.pth
+            docker_artifacts_prefix = "/app/model_artifacts/"
+            if normalized.startswith(docker_artifacts_prefix):
+                relative = normalized.removeprefix(docker_artifacts_prefix)
+                candidate = artifacts_base / relative
+                checked_paths.append(candidate)
+                if candidate.exists():
+                    return candidate.resolve()
+
+            # If manifest uses repo-relative path:
+            # model_artifacts/cigarette-butt/model_final.pth
+            repo_artifacts_prefix = "model_artifacts/"
+            if normalized.startswith(repo_artifacts_prefix):
+                relative = normalized.removeprefix(repo_artifacts_prefix)
+                candidate = artifacts_base / relative
+                checked_paths.append(candidate)
+                if candidate.exists():
+                    return candidate.resolve()
+
+            # If manifest already uses a relative path:
+            # cigarette-butt/model_final.pth
+            if not Path(normalized).is_absolute():
+                candidate = artifacts_base / normalized
+                checked_paths.append(candidate)
+                if candidate.exists():
+                    return candidate.resolve()
+
+            # Last fallback: filename only
+            candidate = artifacts_base / Path(normalized).name
             checked_paths.append(candidate)
             if candidate.exists():
                 return candidate.resolve()
 
-            # Also try just the filename part
-            candidate = Path(artifacts_dir) / Path(normalized).name
-            checked_paths.append(candidate)
-            if candidate.exists():
-                return candidate.resolve()
-
-        # 3. Map Docker-style /app/... paths to local repo root
+        # 3. Local dev fallback: map /app/... paths into repo
         if normalized.startswith("/app/"):
             repo_root = Path(__file__).resolve().parents[3]
             relative = normalized.removeprefix("/app/")
@@ -100,7 +124,6 @@ class Detectron2Service(BaseModelService):
             if candidate.exists():
                 return candidate.resolve()
 
-            # Some repos keep artifacts under app/
             candidate_in_app_dir = repo_root / "app" / relative
             checked_paths.append(candidate_in_app_dir)
             if candidate_in_app_dir.exists():
