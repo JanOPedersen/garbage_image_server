@@ -26,7 +26,6 @@ services:
 
       MODEL_ARTIFACTS_DIR: /app/app/model_artifacts
       MODEL_SUBDIR: cigarette-butt
-      MODEL_FILENAME: model_final.pth
 
       # optional locally; set this if you want the container to download
       # the model the same way Render does
