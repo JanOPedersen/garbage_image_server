@@ -1,0 +1,29 @@
+services:
+  - type: web
+    name: litter-api
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    autoDeploy: true
+    healthCheckPath: /healthz
+    envVars:
+      - key: LOG_LEVEL
+        value: DEBUG
+      - key: DEVICE
+        value: cpu
+      - key: DEFAULT_MANIFEST_FILE
+        value: models/manifests/cigarette-butt-Method-2.yaml
+      - key: MAX_CONTENT_LENGTH
+        value: "8388608"
+      - key: PYTHONUNBUFFERED
+        value: "1"
+      - key: FLASK_RUN_HOST
+        value: "0.0.0.0"
+      - key: FLASK_RUN_PORT
+        value: "5000"
+      - key: FLASK_DEBUG
+        value: "false"
+      - key: MODEL_ARTIFACTS_DIR
+        value: /tmp/model_artifacts
+      - key: MODEL_URL
+        value: https://github.com/JanOPedersen/garbage_image_server/releases/download/v1.0/
