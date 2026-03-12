@@ -54,9 +54,14 @@ class Detectron2Service(BaseModelService):
         if "max_size_test" in self.manifest:
             cfg.INPUT.MAX_SIZE_TEST = int(self.manifest["max_size_test"])
 
-        #cfg.MODEL.RPN.PRE_NMS_TOPK_TEST = 150
-        #cfg.MODEL.RPN.POST_NMS_TOPK_TEST = 50
-        #cfg.TEST.DETECTIONS_PER_IMAGE = 20
+        if "pre_nms_topk_test" in self.manifest:
+            cfg.MODEL.RPN.PRE_NMS_TOPK_TEST = int(self.manifest["pre_nms_topk_test"])
+
+        if "post_nms_topk_test" in self.manifest:
+            cfg.MODEL.RPN.POST_NMS_TOPK_TEST = int(self.manifest["post_nms_topk_test"])
+
+        if "detections_per_image" in self.manifest:
+            cfg.TEST.DETECTIONS_PER_IMAGE = int(self.manifest["detections_per_image"])
 
         self.cfg = cfg
         try:
