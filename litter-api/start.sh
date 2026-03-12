@@ -23,6 +23,7 @@ WEIGHTS_PATH_RAW="${WEIGHTS_PATH_RAW%\"}"
 WEIGHTS_PATH_RAW="${WEIGHTS_PATH_RAW#\"}"
 WEIGHTS_PATH_RAW="${WEIGHTS_PATH_RAW%\'}"
 WEIGHTS_PATH_RAW="${WEIGHTS_PATH_RAW#\'}"
+WEIGHTS_FILENAME="$(basename "${WEIGHTS_PATH_RAW}")"
 
 if [[ "${WEIGHTS_PATH_RAW}" = /* ]]; then
   MODEL_PATH="${WEIGHTS_PATH_RAW}"
@@ -33,21 +34,23 @@ fi
 mkdir -p "$(dirname "${MODEL_PATH}")"
 
 if [ -n "${MODEL_URL}" ]; then
+  MODEL_DOWNLOAD_URL="${MODEL_URL%/}/${WEIGHTS_FILENAME}"
+
   if [ ! -f "${MODEL_PATH}" ]; then
     echo "Testing asset URL headers..."
     curl -I -L \
       --connect-timeout 20 \
       --max-time 60 \
-      "${MODEL_URL}"
+      "${MODEL_DOWNLOAD_URL}"
 
-    echo "Downloading model from: ${MODEL_URL}"
+    echo "Downloading model from: ${MODEL_DOWNLOAD_URL}"
     curl -fL \
       --connect-timeout 20 \
       --max-time 600 \
       --retry 3 \
       --retry-delay 5 \
       -o "${MODEL_PATH}" \
-      "${MODEL_URL}"
+      "${MODEL_DOWNLOAD_URL}"
 
     echo "Downloaded model to: ${MODEL_PATH}"
     ls -lh "${MODEL_PATH}"
