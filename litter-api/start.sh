@@ -7,6 +7,15 @@ MODEL_ARTIFACTS_DIR="${MODEL_ARTIFACTS_DIR:-/tmp/model_artifacts}"
 DEFAULT_MANIFEST_FILE="${DEFAULT_MANIFEST_FILE:-models/manifests/cigarette-butt-v1.yaml}"
 MODEL_URL="${MODEL_URL:-}"
 
+# Render env values can occasionally include wrapping quotes or trailing whitespace.
+MODEL_URL="${MODEL_URL//$'\r'/}"
+MODEL_URL="${MODEL_URL//$'\n'/}"
+MODEL_URL="${MODEL_URL%\"}"
+MODEL_URL="${MODEL_URL#\"}"
+MODEL_URL="${MODEL_URL%\'}"
+MODEL_URL="${MODEL_URL#\'}"
+MODEL_URL="$(printf '%s' "${MODEL_URL}" | sed -E 's/^[[:space:]]+//; s/[[:space:]]+$//')"
+
 echo "[boot] MODEL_ARTIFACTS_DIR  = ${MODEL_ARTIFACTS_DIR}"
 echo "[boot] DEFAULT_MANIFEST_FILE = ${DEFAULT_MANIFEST_FILE}"
 echo "[boot] MODEL_URL             = ${MODEL_URL:-(not set)}"
@@ -41,6 +50,11 @@ echo "[boot] WEIGHTS_FILENAME      = ${WEIGHTS_FILENAME}"
 echo "[boot] MODEL_PATH            = ${MODEL_PATH}"
 
 if [ -n "${MODEL_URL}" ]; then
+  if [[ ! "${MODEL_URL}" =~ ^https?:// ]]; then
+    echo "[boot] ERROR: MODEL_URL must start with http:// or https://. Got: '${MODEL_URL}'"
+    exit 1
+  fi
+
   MODEL_DOWNLOAD_URL="${MODEL_URL%/}/${WEIGHTS_FILENAME}"
   echo "[boot] MODEL_DOWNLOAD_URL    = ${MODEL_DOWNLOAD_URL}"
 
