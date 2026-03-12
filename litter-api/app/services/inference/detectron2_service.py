@@ -1,4 +1,5 @@
 import time
+import logging
 from typing import Any
 import importlib
 
@@ -8,6 +9,8 @@ from pathlib import Path
 from app.services.inference.base import BaseModelService
 from app.services.inference.preprocessing import decode_image
 from app.services.inference.postprocessing import serialize_detections
+
+log = logging.getLogger(__name__)
 
 
 class Detectron2Service(BaseModelService):
@@ -24,9 +27,14 @@ class Detectron2Service(BaseModelService):
             ) from exc
 
     def load(self) -> None:
+        t_load_start = time.perf_counter()
+        log.info("[%s] Starting Detectron2 load", self.model_id)
+
         model_zoo_config = self.manifest["model_zoo_config"]
         weights_path = self._resolve_weights_path(str(self.manifest["weights_path"]))
+        log.info("[%s] Resolved weights path: %s", self.model_id, weights_path)
 
+        t_import_start = time.perf_counter()
         try:
             model_zoo = importlib.import_module("detectron2.model_zoo")
             get_cfg = importlib.import_module("detectron2.config").get_cfg
@@ -36,7 +44,13 @@ class Detectron2Service(BaseModelService):
                 "Failed to import detectron2. Ensure detectron2 is installed and dependency "
                 "versions are compatible (e.g. detectron2 v0.6 requires Pillow 9.x)."
             ) from exc
+        log.info(
+            "[%s] Detectron2 modules imported in %.2f ms",
+            self.model_id,
+            (time.perf_counter() - t_import_start) * 1000,
+        )
 
+        t_cfg_start = time.perf_counter()
         cfg = get_cfg()
         cfg.merge_from_file(model_zoo.get_config_file(model_zoo_config))
 
@@ -62,8 +76,16 @@ class Detectron2Service(BaseModelService):
 
         if "detections_per_image" in self.manifest:
             cfg.TEST.DETECTIONS_PER_IMAGE = int(self.manifest["detections_per_image"])
+        log.info(
+            "[%s] Config prepared in %.2f ms (model_zoo_config=%s)",
+            self.model_id,
+            (time.perf_counter() - t_cfg_start) * 1000,
+            model_zoo_config,
+        )
 
         self.cfg = cfg
+        log.info("[%s] Initializing DefaultPredictor...", self.model_id)
+        t_predictor_start = time.perf_counter()
         try:
             self.predictor = default_predictor(cfg)
         except Exception as exc:
@@ -71,12 +93,19 @@ class Detectron2Service(BaseModelService):
                 f"Failed to initialize Detectron2 predictor for model '{self.model_id}'. "
                 f"Resolved weights path: {weights_path}"
             ) from exc
+        log.info(
+            "[%s] DefaultPredictor initialized in %.2f ms",
+            self.model_id,
+            (time.perf_counter() - t_predictor_start) * 1000,
+        )
         self.loaded = True
+        log.info(
+            "[%s] Detectron2 load complete in %.2f ms",
+            self.model_id,
+            (time.perf_counter() - t_load_start) * 1000,
+        )
 
     def _resolve_weights_path(self, raw_path: str) -> Path:
-        import logging
-        log = logging.getLogger(__name__)
-
         normalized = raw_path.replace("\\", "/")
         artifacts_dir = os.getenv("MODEL_ARTIFACTS_DIR")
 
@@ -106,6 +135,9 @@ class Detectron2Service(BaseModelService):
         )
 
     def warmup(self) -> None:
+        t_warmup_start = time.perf_counter()
+        log.info("[%s] Starting warmup", self.model_id)
+
         # Run one dummy inference once the real predictor exists
         if not self.loaded:
             raise RuntimeError("Model must be loaded before warmup")
@@ -117,8 +149,15 @@ class Detectron2Service(BaseModelService):
 
         # Warmup with a small dummy image
         dummy = torch.zeros((256, 256, 3), dtype=torch.uint8).numpy()
+        t_forward_start = time.perf_counter()
         with torch.inference_mode():
             _ = self.predictor(dummy)
+        log.info(
+            "[%s] Warmup forward pass in %.2f ms; total warmup %.2f ms",
+            self.model_id,
+            (time.perf_counter() - t_forward_start) * 1000,
+            (time.perf_counter() - t_warmup_start) * 1000,
+        )
 
     def predict(
         self,
