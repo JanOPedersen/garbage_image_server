@@ -36,6 +36,9 @@ WEIGHTS_PATH_RAW="${WEIGHTS_PATH_RAW%\"}"
 WEIGHTS_PATH_RAW="${WEIGHTS_PATH_RAW#\"}"
 WEIGHTS_PATH_RAW="${WEIGHTS_PATH_RAW%\'}"
 WEIGHTS_PATH_RAW="${WEIGHTS_PATH_RAW#\'}"
+WEIGHTS_PATH_RAW="${WEIGHTS_PATH_RAW//$'\r'/}"
+WEIGHTS_PATH_RAW="${WEIGHTS_PATH_RAW//$'\n'/}"
+WEIGHTS_PATH_RAW="$(printf '%s' "${WEIGHTS_PATH_RAW}" | sed -E 's/^[[:space:]]+//; s/[[:space:]]+$//')"
 WEIGHTS_FILENAME="$(basename "${WEIGHTS_PATH_RAW}")"
 
 if [[ "${WEIGHTS_PATH_RAW}" = /* ]]; then
@@ -48,6 +51,8 @@ mkdir -p "$(dirname "${MODEL_PATH}")"
 
 echo "[boot] WEIGHTS_FILENAME      = ${WEIGHTS_FILENAME}"
 echo "[boot] MODEL_PATH            = ${MODEL_PATH}"
+printf '[boot] WEIGHTS_PATH_RAW(q)  = %q\n' "${WEIGHTS_PATH_RAW}"
+printf '[boot] WEIGHTS_FILENAME(q)  = %q\n' "${WEIGHTS_FILENAME}"
 
 if [ -n "${MODEL_URL}" ]; then
   if [[ ! "${MODEL_URL}" =~ ^https?:// ]]; then
@@ -57,6 +62,7 @@ if [ -n "${MODEL_URL}" ]; then
 
   MODEL_DOWNLOAD_URL="${MODEL_URL%/}/${WEIGHTS_FILENAME}"
   echo "[boot] MODEL_DOWNLOAD_URL    = ${MODEL_DOWNLOAD_URL}"
+  printf '[boot] MODEL_DOWNLOAD_URL(q)= %q\n' "${MODEL_DOWNLOAD_URL}"
 
   if [ ! -f "${MODEL_PATH}" ]; then
     echo "Testing asset URL headers..."
