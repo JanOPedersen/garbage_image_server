@@ -12,7 +12,9 @@ class Config:
     PROPAGATE_EXCEPTIONS = True
 
     MAX_CONTENT_LENGTH = int(os.getenv("MAX_CONTENT_LENGTH", 8 * 1024 * 1024))
-    MODEL_MANIFEST_DIR = os.getenv("MODEL_MANIFEST_DIR", "models/manifests")
-    DEFAULT_MODEL_ID = os.getenv("DEFAULT_MODEL_ID", "cigarette-butt-v1")
+    DEFAULT_MANIFEST_FILE = os.getenv(
+        "DEFAULT_MANIFEST_FILE",
+        "models/manifests/cigarette-butt-v1.yaml",
+    )
     DEVICE = os.getenv("DEVICE", "cpu")
     LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")

@@ -11,8 +11,7 @@
       "env": {
         "LOG_LEVEL": "DEBUG",
         "DEVICE": "cpu",
-        "DEFAULT_MODEL_ID": "cigarette-butt-v1",
-        "MODEL_MANIFEST_DIR": "models/manifests"
+        "DEFAULT_MANIFEST_FILE": "models/manifests/cigarette-butt-v1.yaml"
       },
       "justMyCode": false
     },

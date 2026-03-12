@@ -140,7 +140,7 @@ def create_app(config_object: type[Config] = Config) -> Flask:
 
     # Load models once at startup
     with app.app_context():
-        model_registry.load_from_manifest_dir(app.config["MODEL_MANIFEST_DIR"])
+        model_registry.load_from_manifest_file(app.config["DEFAULT_MANIFEST_FILE"])
 
     return app
 ```
@@ -164,8 +164,10 @@ class Config:
     PROPAGATE_EXCEPTIONS = True
 
     MAX_CONTENT_LENGTH = int(os.getenv("MAX_CONTENT_LENGTH", 8 * 1024 * 1024))
-    MODEL_MANIFEST_DIR = os.getenv("MODEL_MANIFEST_DIR", "models/manifests")
-    DEFAULT_MODEL_ID = os.getenv("DEFAULT_MODEL_ID", "cigarette-butt-v1")
+    DEFAULT_MANIFEST_FILE = os.getenv(
+        "DEFAULT_MANIFEST_FILE",
+        "models/manifests/cigarette-butt-v1.yaml",
+    )
     DEVICE = os.getenv("DEVICE", "cpu")
     LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
 ```
@@ -316,7 +318,7 @@ def predict(args):
     if image_file.filename == "":
         abort(400, message="Empty filename")
 
-    model_id = args.get("model_id") or current_app.config["DEFAULT_MODEL_ID"]
+    model_id = args.get("model_id") or model_registry.default_model_id
     service = model_registry.get(model_id)
     if service is None:
         abort(404, message=f"Unknown model_id: {model_id}")
@@ -528,20 +530,19 @@ class ModelRegistry:
     def __init__(self) -> None:
         self._models: dict[str, Detectron2Service] = {}
 
-    def load_from_manifest_dir(self, manifest_dir: str) -> None:
-        path = Path(manifest_dir)
+    def load_from_manifest_file(self, manifest_file: str) -> None:
+        path = Path(manifest_file)
         if not path.exists():
-            raise FileNotFoundError(f"Manifest directory not found: {manifest_dir}")
+            raise FileNotFoundError(f"Manifest file not found: {manifest_file}")
 
-        for manifest_file in path.glob("*.yaml"):
-            with manifest_file.open("r", encoding="utf-8") as f:
-                manifest = yaml.safe_load(f)
+        with path.open("r", encoding="utf-8") as f:
+            manifest = yaml.safe_load(f)
 
-            model_id = manifest["model_id"]
-            service = Detectron2Service(manifest)
-            service.load()
-            service.warmup()
-            self._models[model_id] = service
+        model_id = manifest["model_id"]
+        service = Detectron2Service(manifest)
+        service.load()
+        service.warmup()
+        self._models = {model_id: service}
 
     def get(self, model_id: str):
         return self._models.get(model_id)
@@ -654,8 +655,7 @@ services:
     environment:
       LOG_LEVEL: INFO
       DEVICE: cpu
-      DEFAULT_MODEL_ID: cigarette-butt-v1
-      MODEL_MANIFEST_DIR: models/manifests
+            DEFAULT_MANIFEST_FILE: models/manifests/cigarette-butt-v1.yaml
       MAX_CONTENT_LENGTH: 8388608
     volumes:
       - .:/app
@@ -719,8 +719,7 @@ Create `.vscode/launch.json`:
       "env": {
         "LOG_LEVEL": "DEBUG",
         "DEVICE": "cpu",
-        "DEFAULT_MODEL_ID": "cigarette-butt-v1",
-        "MODEL_MANIFEST_DIR": "models/manifests"
+        "DEFAULT_MANIFEST_FILE": "models/manifests/cigarette-butt-v1.yaml"
       },
       "justMyCode": false
     }

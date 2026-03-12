@@ -13,8 +13,7 @@ services:
     environment:
       LOG_LEVEL: DEBUG
       DEVICE: cpu
-      DEFAULT_MODEL_ID: cigarette-butt-v1
-      MODEL_MANIFEST_DIR: models/manifests
+      DEFAULT_MANIFEST_FILE: models/manifests/cigarette-butt-v1.yaml
       MAX_CONTENT_LENGTH: 8388608
       PYTHONUNBUFFERED: "1"
       PYDEVD_DISABLE_FILE_VALIDATION: "1"

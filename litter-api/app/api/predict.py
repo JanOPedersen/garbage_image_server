@@ -22,7 +22,10 @@ def predict(args):
     if image_file.filename == "":
         abort(400, message="Empty filename")
 
-    model_id = args.get("model_id") or current_app.config["DEFAULT_MODEL_ID"]
+    model_id = args.get("model_id") or model_registry.default_model_id
+    if model_id is None:
+        abort(503, message="No default model is configured")
+
     service = model_registry.get(model_id)
     if service is None:
         abort(404, message=f"Unknown model_id: {model_id}")

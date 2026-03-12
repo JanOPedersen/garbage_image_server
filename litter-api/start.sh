@@ -4,11 +4,10 @@ set -euo pipefail
 echo "Starting Render/Docker bootstrap..."
 
 MODEL_ARTIFACTS_DIR="${MODEL_ARTIFACTS_DIR:-/tmp/model_artifacts}"
-MODEL_MANIFEST_DIR="${MODEL_MANIFEST_DIR:-models/manifests}"
-DEFAULT_MODEL_ID="${DEFAULT_MODEL_ID:-cigarette-butt-v1}"
+DEFAULT_MANIFEST_FILE="${DEFAULT_MANIFEST_FILE:-models/manifests/cigarette-butt-v1.yaml}"
 MODEL_URL="${MODEL_URL:-}"
 
-MANIFEST_PATH="${MODEL_MANIFEST_DIR%/}/${DEFAULT_MODEL_ID}.yaml"
+MANIFEST_PATH="${DEFAULT_MANIFEST_FILE}"
 if [ ! -f "${MANIFEST_PATH}" ]; then
   echo "Manifest not found: ${MANIFEST_PATH}"
   exit 1
@@ -61,8 +60,7 @@ else
 fi
 
 export MODEL_ARTIFACTS_DIR
-export MODEL_MANIFEST_DIR
-export DEFAULT_MODEL_ID
+export DEFAULT_MANIFEST_FILE
 export MODEL_PATH
 
 echo "Starting Gunicorn on 0.0.0.0:${PORT:-5000}"

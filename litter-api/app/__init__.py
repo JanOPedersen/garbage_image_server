@@ -22,6 +22,6 @@ def create_app(config_object: type[Config] = Config) -> Flask:
     # Load models only when not testing
     if not app.config.get("TESTING", False):
         with app.app_context():
-            model_registry.load_from_manifest_dir(app.config["MODEL_MANIFEST_DIR"])
+            model_registry.load_from_manifest_file(app.config["DEFAULT_MANIFEST_FILE"])
 
     return app

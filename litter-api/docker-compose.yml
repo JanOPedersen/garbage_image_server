@@ -14,8 +14,7 @@ services:
     environment:
       LOG_LEVEL: INFO
       DEVICE: cpu
-      DEFAULT_MODEL_ID: cigarette-butt-v1
-      MODEL_MANIFEST_DIR: models/manifests
+      DEFAULT_MANIFEST_FILE: models/manifests/cigarette-butt-v1.yaml
       MAX_CONTENT_LENGTH: 8388608
       FLASK_RUN_HOST: 0.0.0.0
       FLASK_RUN_PORT: 5000
