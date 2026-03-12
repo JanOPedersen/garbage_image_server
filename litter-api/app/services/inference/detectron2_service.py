@@ -74,8 +74,14 @@ class Detectron2Service(BaseModelService):
         self.loaded = True
 
     def _resolve_weights_path(self, raw_path: str) -> Path:
+        import logging
+        log = logging.getLogger(__name__)
+
         normalized = raw_path.replace("\\", "/")
         artifacts_dir = os.getenv("MODEL_ARTIFACTS_DIR")
+
+        log.info("Resolving weights path: '%s'", raw_path)
+        log.info("  MODEL_ARTIFACTS_DIR = %s", artifacts_dir or "(not set)")
 
         if not artifacts_dir:
             raise FileNotFoundError(
@@ -85,6 +91,9 @@ class Detectron2Service(BaseModelService):
             )
 
         candidate = (Path(artifacts_dir) / normalized.lstrip("/")).resolve()
+        log.info("  Candidate path: %s", candidate)
+        log.info("  Exists: %s", candidate.exists())
+
         if candidate.exists():
             return candidate
 

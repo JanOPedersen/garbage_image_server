@@ -7,6 +7,10 @@ MODEL_ARTIFACTS_DIR="${MODEL_ARTIFACTS_DIR:-/tmp/model_artifacts}"
 DEFAULT_MANIFEST_FILE="${DEFAULT_MANIFEST_FILE:-models/manifests/cigarette-butt-v1.yaml}"
 MODEL_URL="${MODEL_URL:-}"
 
+echo "[boot] MODEL_ARTIFACTS_DIR  = ${MODEL_ARTIFACTS_DIR}"
+echo "[boot] DEFAULT_MANIFEST_FILE = ${DEFAULT_MANIFEST_FILE}"
+echo "[boot] MODEL_URL             = ${MODEL_URL:-(not set)}"
+
 MANIFEST_PATH="${DEFAULT_MANIFEST_FILE}"
 if [ ! -f "${MANIFEST_PATH}" ]; then
   echo "Manifest not found: ${MANIFEST_PATH}"
@@ -33,8 +37,12 @@ fi
 
 mkdir -p "$(dirname "${MODEL_PATH}")"
 
+echo "[boot] WEIGHTS_FILENAME      = ${WEIGHTS_FILENAME}"
+echo "[boot] MODEL_PATH            = ${MODEL_PATH}"
+
 if [ -n "${MODEL_URL}" ]; then
   MODEL_DOWNLOAD_URL="${MODEL_URL%/}/${WEIGHTS_FILENAME}"
+  echo "[boot] MODEL_DOWNLOAD_URL    = ${MODEL_DOWNLOAD_URL}"
 
   if [ ! -f "${MODEL_PATH}" ]; then
     echo "Testing asset URL headers..."
@@ -59,7 +67,11 @@ if [ -n "${MODEL_URL}" ]; then
     ls -lh "${MODEL_PATH}"
   fi
 else
-  echo "MODEL_URL not set; assuming model already exists at: ${MODEL_PATH}"
+  echo "[boot] MODEL_URL not set; assuming model already exists at: ${MODEL_PATH}"
+  if [ ! -f "${MODEL_PATH}" ]; then
+    echo "[boot] ERROR: model file does not exist and MODEL_URL is not set. Aborting."
+    exit 1
+  fi
 fi
 
 export MODEL_ARTIFACTS_DIR
