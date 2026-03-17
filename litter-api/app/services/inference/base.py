@@ -20,6 +20,7 @@ class BaseModelService(ABC):
     def predict(
         self,
         image_bytes: bytes,
+        filename: str | None = None,
         score_threshold: float | None = None,
         return_masks: bool = False,
     ) -> dict[str, Any]:

@@ -14,9 +14,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-RUN python -m pip install --no-cache-dir --no-build-isolation \
-    "detectron2 @ git+https://github.com/facebookresearch/detectron2.git@v0.6"
-
 COPY . .
 
 RUN chmod +x /app/start.sh

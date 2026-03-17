@@ -6,7 +6,7 @@ from app.services import model_registry as model_registry_module
 from app.services.model_registry import ModelRegistry
 
 
-class DummyDetectron2Service:
+class DummyONNXRuntimeService:
     def __init__(self, manifest):
         self.manifest = manifest
         self.loaded = False
@@ -42,8 +42,8 @@ def test_model_registry_loads_only_configured_manifest(tmp_path, monkeypatch):
 
     monkeypatch.setattr(
         model_registry_module,
-        "Detectron2Service",
-        DummyDetectron2Service,
+        "ONNXRuntimeService",
+        DummyONNXRuntimeService,
     )
 
     registry = ModelRegistry()

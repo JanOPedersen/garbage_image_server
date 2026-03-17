@@ -2,14 +2,14 @@ import logging
 from pathlib import Path
 import yaml
 
-from app.services.inference.detectron2_service import Detectron2Service
+from app.services.inference.onnxruntime_service import ONNXRuntimeService
 
 log = logging.getLogger(__name__)
 
 
 class ModelRegistry:
     def __init__(self) -> None:
-        self._models: dict[str, Detectron2Service] = {}
+        self._models: dict[str, ONNXRuntimeService] = {}
         self._default_model_id: str | None = None
 
     def load_from_manifest_file(self, manifest_file: str) -> None:
@@ -27,7 +27,7 @@ class ModelRegistry:
         log.info("  weights_path: %s", manifest.get("weights_path"))
         log.info("  device:       %s", manifest.get("device", "(not set, will use DEVICE env)"))
 
-        service = Detectron2Service(manifest)
+        service = ONNXRuntimeService(manifest)
         log.info("Loading model weights...")
         service.load()
         log.info("Weights loaded — running warmup...")

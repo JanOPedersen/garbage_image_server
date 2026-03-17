@@ -1,19 +1,32 @@
 model_id: cigarette-butt-Method-1
 version: 2026-03-12
-task_type: instance_segmentation
-framework: detectron2
+task_type: object_detection
+framework: onnxruntime
 device: cpu
 
-weights_path: cigarette-butt/model_final_method_1_raw.pth
-model_zoo_config: COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_3x.yaml
+weights_path: cigarette-butt/cigbutts_yolo11n.onnx
+
+input_name: images
+input_format: nchw
+input_dtype: float32
+normalize: true
+channel_order: rgb
+input_size: [512, 512]
+
+ort_providers:
+  - CPUExecutionProvider
+
+output_decoder: ultralytics_yolo
+output_map:
+  raw_detections: output0
 
 labels:
   - cigarette_butt
 num_classes: 1
 
 default_score_threshold: 0.5
-min_size_test: 512
-max_size_test: 768
+nms_iou_threshold: 0.45
+max_detections: 100
 
 max_image_side: 2048
 sync_allowed: true
